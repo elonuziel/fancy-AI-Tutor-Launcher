@@ -27,9 +27,15 @@ if %errorlevel% equ 0 (
 echo %CYAN%Checking system requirements...%RESET%
 echo.
 
-if not exist "engine\llama-cli.exe" (
-    echo %RED%[ERROR] Could not find 'engine\llama-cli.exe'%RESET%
-    echo Please ensure the engine folder contains llama-cli.exe
+set "engine_found=0"
+for /d %%d in (engine-*) do (
+    if exist "%%d\llama-cli.exe" set "engine_found=1"
+)
+
+if "!engine_found!"=="0" (
+    echo %RED%[ERROR] Could not find any engine files!%RESET%
+    echo Please ensure you have extracted the engine to a folder starting with 'engine-'
+    echo Examples: 'engine-cpu', 'engine-vulkan', 'engine-cuda', 'engine-sycl'
     echo.
     pause
     exit /b 1
@@ -103,6 +109,64 @@ if !valid! equ 0 (
 set "MODEL_NAME=!model%choice%!"
 set "MODEL_SIZE_BYTES=!modelsize%choice%!"
 set /a MODEL_SIZE_MB=!MODEL_SIZE_BYTES!/1048576
+
+:: --- COMPUTE ENGINE SELECTION ---
+cls
+echo.
+echo %CYAN%========================================%RESET%
+echo %CYAN%        COMPUTE ENGINE%RESET%
+echo %CYAN%========================================%RESET%
+echo.
+echo Detected engines:
+echo.
+
+set engine_count=0
+
+for /d %%d in (engine-*) do (
+    if exist "%%d\llama-cli.exe" (
+        set /a engine_count+=1
+        set "engine_dir!engine_count!=%%d"
+        
+        :: Format the name cleanly
+        set "engine_n=%%d"
+        set "engine_n=!engine_n:engine-=!"
+        
+        echo %GREEN%[!engine_count!]%RESET% !engine_n!
+    )
+)
+
+echo.
+set /p engine_choice="Select compute engine [1-!engine_count!] (press Enter for 1): "
+if "!engine_choice!"=="" set "engine_choice=1"
+
+:: Validate input
+set "valid=0"
+for /l %%i in (1,1,!engine_count!) do (
+    if "!engine_choice!"=="%%i" set "valid=1"
+)
+
+if !valid! equ 0 (
+    echo %RED%Invalid selection. Defaulting to 1.%RESET%
+    set "engine_choice=1"
+    timeout /t 2 >nul
+)
+
+set "selected_engine_dir=!engine_dir%engine_choice%!"
+set "ENGINE_EXE=!selected_engine_dir!\llama-cli.exe"
+set "engine_name=!selected_engine_dir:engine-=!"
+
+:: Enable GPU offloading for all except pure CPU
+set "ngl_param=-ngl 99"
+if /i "!engine_name!"=="cpu" (
+    set "ngl_param="
+)
+
+if not exist "!ENGINE_EXE!" (
+    echo.
+    echo %RED%[WARNING] The executable !ENGINE_EXE! was not found.%RESET%
+    echo %YELLOW%Please check your installation. The launcher may crash if the file is missing.%RESET%
+    timeout /t 3 >nul
+)
 
 :: --- PERFORMANCE SELECTION ---
 cls
@@ -216,6 +280,7 @@ echo.
 echo %YELLOW%Model:%RESET%       !MODEL_NAME!
 echo %YELLOW%Mode:%RESET%        !mode_color!!mode!%RESET%
 echo %YELLOW%Threads:%RESET%     !final_threads! CPU cores
+echo %YELLOW%Engine:%RESET%      !engine_name!
 echo %YELLOW%Context:%RESET%     !final_context! tokens (~!final_context! words)
 echo %YELLOW%Priority:%RESET%    !final_prio!
 echo %YELLOW%Prompt:%RESET%      !SYSTEM_PROMPT!
@@ -229,8 +294,9 @@ timeout /t 3 >nul
 echo %CYAN%Initializing AI model...%RESET%
 echo.
 
-"engine\llama-cli.exe" ^
+"!ENGINE_EXE!" ^
   -m "models\!MODEL_NAME!" ^
+  !ngl_param! ^
   -cnv ^
   -t !final_threads! ^
   -c !final_context! ^

@@ -11,15 +11,27 @@ The **AI Tutor Launcher** is a "wrapper" script. It acts as the bridge between y
 For everything to work, your folders must look exactly like this:
 - **[Main Folder]** (Can be named anything, e.g., "MyAITutor")
   - `Start_Tutor_Improved.bat` (The launcher script)
-  - `engine/` (Where the "brain" software goes)
+  - `Start_Tutor_Improved.bat` (The launcher script)
+  - `engine-YOUR_CHOICE/` (e.g., `engine-cpu`, `engine-cuda`, `engine-hip`)
   - `models/` (Where the AI model files go)
 
-## 3. Getting the Engine (The "Brain")
-The engine is what actually processes your questions.
+*Note: You can have multiple engine folders! The launcher will automatically detect any folder that starts with `engine-`.*
+
+## 3. Getting the Engine(s) (The "Brain")
+The engine is what actually processes your questions. You can choose to download any engine type that matches your hardware:
+
+- **CPU (`engine-cpu`):** Slower but guaranteed to work on any Windows PC natively.
+- **CUDA (`engine-cuda`):** The absolute fastest option, requires a modern NVIDIA graphics card.
+- **Vulkan (`engine-vulkan`):** Very fast, works on almost any dedicated or modern integrated graphics card (AMD, Intel, older NVIDIA).
+- **Other specialized engines:** SYCL (Intel), HIP (AMD ROCm), OpenVINO, etc.
+
 1. Go to: https://github.com/ggerganov/llama.cpp/releases
-2. Download the latest version for Windows. Look for a file containing `win-XXX-x64.zip`. XXX is the version - if you have a GPU (even integrated), look for a file containing your appropiate GPU drivers (vulkan for general support).
-3. Open that zip file and copy **all** files into your `engine/` folder.
-4. You should see files like `llama-cli.exe` and many `.dll` files inside.
+2. Download the `win-XXX-x64` zip file that corresponds to your hardware. 
+   - For CPU, look for the basic `win-XXX-x64.zip`.
+   - For others, look for the suffix (e.g., `-vulkan`, `-cu1220`, `-hip`, `-sycl`).
+3. Create a new folder starting with `engine-` (for example: `engine-cpu` or `engine-hip`).
+4. Extract **all** files from your downloaded zip into that folder. 
+5. You should see `llama-cli.exe` and some `.dll` files inside the folder you just populated.
 
 ## 4. Getting the Models (The "Knowledge")
 Models are the AI's memory. They end in `.gguf`.
@@ -42,6 +54,6 @@ Models are the AI's memory. They end in `.gguf`.
 ---
 
 ## ❓ Troubleshooting
-- **Error: llama-cli.exe not found:** You didn't put the files in the `engine/` folder correctly.
+- **Error: Could not find any engine files!:** You didn't put the files in a folder starting with `engine-` (like `engine-cpu/` or `engine-cuda/`) correctly, or you didn't extract `llama-cli.exe`.
 - **Error: No .gguf files found:** You need to download a model and put it in the `models/` folder.
 - **AI is too slow:** Try a smaller model (under 3GB) or use "LOW" mode.
