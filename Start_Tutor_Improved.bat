@@ -167,47 +167,50 @@ if !valid! equ 0 (
 set "selected_engine_dir=!engine_dir%engine_choice%!"
 set "engine_name=!selected_engine_dir:engine-=!"
 
-:: Enable GPU offloading for all except pure CPU
-if /i "!engine_name!"=="cpu" (
-    set "ngl_param="
-    set "flash_attn_param="
-) else (
-    set "ngl_param=-ngl 99"
-    cls
-    echo.
-    echo %CYAN%========================================%RESET%
-    echo %CYAN%        GPU LAYER OFFLOADING%RESET%
-    echo %CYAN%========================================%RESET%
-    echo.
-    echo By default, all layers are offloaded to the GPU for maximum speed.
-    echo If your GPU lacks memory ^(VRAM^), you can specify exactly how many 
-    echo layers to offload ^(e.g., 10, 15, 20^). 
-    echo.
-    set "ngl_input="
-    set /p "ngl_input=Enter number of layers to offload (press Enter to offload ALL): "
-    if not "!ngl_input!"=="" (
-        set "ngl_param=-ngl !ngl_input!"
-    )
-    
-    :: Ask for Flash Attention
-    cls
-    echo.
-    echo %CYAN%========================================%RESET%
-    echo %CYAN%        ADVANCED OPTIMIZATIONS%RESET%
-    echo %CYAN%========================================%RESET%
-    echo.
-    echo %YELLOW%Flash Attention%RESET% significantly reduces VRAM usage and speeds up processing,
-    echo but it requires a modern GPU ^(e.g., NVIDIA RTX series, newer AMD, Apple Silicon^).
-    echo %RED%Warning:%RESET% Older GPUs may crash or fail to generate text if this is enabled!
-    echo.
-    set "use_fa=N"
-    set /p use_fa="Enable Flash Attention? [Y/N] (Press Enter for N): "
-    if /i "!use_fa!"=="y" (
-        set "flash_attn_param=--flash-attn"
-    ) else (
-        set "flash_attn_param="
-    )
+:: --- ENGINE PARAMETER SETUP ---
+:: Initialize parameters
+set "ngl_param="
+set "flash_attn_param="
+
+:: Only show GPU settings if NOT using pure CPU engine
+if /i "!engine_name!"=="cpu" goto skip_gpu_config
+
+:: --- GPU CONFIGURATION ---
+set "ngl_param=-ngl 99"
+cls
+echo.
+echo %CYAN%========================================%RESET%
+echo %CYAN%        GPU LAYER OFFLOADING%RESET%
+echo %CYAN%========================================%RESET%
+echo.
+echo By default, all layers are offloaded to the GPU for maximum speed.
+echo If your GPU lacks memory ^(VRAM^), you can specify exactly how many 
+echo layers to offload ^(e.g., 10, 15, 20^). 
+echo.
+set "ngl_input="
+set /p "ngl_input=Enter number of layers to offload (press Enter to offload ALL): "
+if not "!ngl_input!"=="" (
+    set "ngl_param=-ngl !ngl_input!"
 )
+
+:: Ask for Flash Attention
+cls
+echo.
+echo %CYAN%========================================%RESET%
+echo %CYAN%        ADVANCED OPTIMIZATIONS%RESET%
+echo %CYAN%========================================%RESET%
+echo.
+echo %YELLOW%Flash Attention%RESET% significantly reduces VRAM usage and speeds up processing,
+echo but it requires a modern GPU ^(e.g., NVIDIA RTX series, newer AMD, Apple Silicon^).
+echo %RED%Warning:%RESET% Older GPUs may crash or fail to generate text if this is enabled!
+echo.
+set "use_fa=N"
+set /p use_fa="Enable Flash Attention? [Y/N] (Press Enter for N): "
+if /i "!use_fa!"=="y" (
+    set "flash_attn_param=--flash-attn"
+)
+
+:skip_gpu_config
 
 :: --- PERFORMANCE SELECTION ---
 cls
