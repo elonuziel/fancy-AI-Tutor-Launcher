@@ -159,9 +159,25 @@ set "selected_engine_dir=!engine_dir%engine_choice%!"
 set "engine_name=!selected_engine_dir:engine-=!"
 
 :: Enable GPU offloading for all except pure CPU
-set "ngl_param=-ngl 99"
 if /i "!engine_name!"=="cpu" (
     set "ngl_param="
+) else (
+    set "ngl_param=-ngl 99"
+    cls
+    echo.
+    echo %CYAN%========================================%RESET%
+    echo %CYAN%        GPU LAYER OFFLOADING%RESET%
+    echo %CYAN%========================================%RESET%
+    echo.
+    echo By default, all layers are offloaded to the GPU for maximum speed.
+    echo If your GPU lacks memory ^(VRAM^), you can specify exactly how many 
+    echo layers to offload ^(e.g., 10, 15, 20^). 
+    echo.
+    set "ngl_input="
+    set /p "ngl_input=Enter number of layers to offload (press Enter to offload ALL): "
+    if not "!ngl_input!"=="" (
+        set "ngl_param=-ngl !ngl_input!"
+    )
 )
 
 :: --- PERFORMANCE SELECTION ---
