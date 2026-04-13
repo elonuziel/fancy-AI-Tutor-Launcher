@@ -351,7 +351,7 @@ echo.
 
 set /p prompt_choice="Select personality [1-4] (press Enter for default): "
 
-if "!prompt_choice!"=="" set "prompt_choice=1"
+if "!prompt_choice!"=="" set "prompt_choice=2"
 
 set "SYSTEM_PROMPT=You are a concise Excel and Python tutor. Answer briefly."
 
@@ -514,7 +514,22 @@ if not exist "!ENGINE_EXE!" (
 :session_end
 
 :: --- POST-EXECUTION ---
-echo.
+if %ERRORLEVEL% NEQ 0 (
+    echo.
+    echo %RED%========================================%RESET%
+    echo %RED%           CRASH DETECTED%RESET%
+    echo %RED%========================================%RESET%
+    echo %YELLOW%The AI engine closed unexpectedly.%RESET%
+    echo.
+    echo %CYAN%Did you see an "ErrorOutOfDeviceMemory" or "failed to allocate" error?%RESET%
+    echo This means your graphics card ran out of VRAM. To fix this:
+    echo  1. Run again and type a smaller number for GPU offloaded layers ^(e.g., 10 or 15^).
+    echo  2. Or, choose the [L] LOW performance mode to reduce context memory.
+    echo  3. Or, switch to the CPU engine instead of Vulkan/CUDA.
+    echo %RED%========================================%RESET%
+    echo.
+)
+
 echo %YELLOW%[STATUS] AI session ended.%RESET%
 echo.
 echo Press any key to return to model selection...
