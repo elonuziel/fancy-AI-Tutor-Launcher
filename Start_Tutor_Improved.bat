@@ -170,6 +170,7 @@ set "engine_name=!selected_engine_dir:engine-=!"
 :: Enable GPU offloading for all except pure CPU
 if /i "!engine_name!"=="cpu" (
     set "ngl_param="
+    set "flash_attn_param="
 ) else (
     set "ngl_param=-ngl 99"
     cls
@@ -187,6 +188,25 @@ if /i "!engine_name!"=="cpu" (
     if not "!ngl_input!"=="" (
         set "ngl_param=-ngl !ngl_input!"
     )
+    
+    :: Ask for Flash Attention
+    cls
+    echo.
+    echo %CYAN%========================================%RESET%
+    echo %CYAN%        ADVANCED OPTIMIZATIONS%RESET%
+    echo %CYAN%========================================%RESET%
+    echo.
+    echo %YELLOW%Flash Attention%RESET% significantly reduces VRAM usage and speeds up processing,
+    echo but it requires a modern GPU ^(e.g., NVIDIA RTX series, newer AMD, Apple Silicon^).
+    echo %RED%Warning:%RESET% Older GPUs may crash or fail to generate text if this is enabled!
+    echo.
+    set "use_fa=N"
+    set /p use_fa="Enable Flash Attention? [Y/N] (Press Enter for N): "
+    if /i "!use_fa!"=="y" (
+        set "flash_attn_param=--flash-attn"
+    ) else (
+        set "flash_attn_param="
+    )
 )
 
 :: --- PERFORMANCE SELECTION ---
@@ -200,74 +220,95 @@ echo %YELLOW%Selected Model:%RESET% !MODEL_NAME! (~!MODEL_SIZE_GB_i!.!MODEL_SIZE
 echo.
 echo %CYAN%Performance Modes:%RESET%
 echo.
-set /a ram_low=!MODEL_SIZE_MB! + 100
+set /a ram_low=!MODEL_SIZE_MB! + 200
 set /a ram_low_i=!ram_low! / 1000
 set /a ram_low_f=(!ram_low! %% 1000) / 100
 
-set /a ram_med=!MODEL_SIZE_MB! + 250
+set /a ram_med=!MODEL_SIZE_MB! + 400
 set /a ram_med_i=!ram_med! / 1000
 set /a ram_med_f=(!ram_med! %% 1000) / 100
 
-set /a ram_high=!MODEL_SIZE_MB! + 600
+set /a ram_high=!MODEL_SIZE_MB! + 800
 set /a ram_high_i=!ram_high! / 1000
 set /a ram_high_f=(!ram_high! %% 1000) / 100
 
-echo %GREEN%[L] LOW%RESET%      - 1 CPU core, ~350 words memory, Low priority
-echo                 Estimated RAM: ~!MODEL_SIZE_GB_i!.!MODEL_SIZE_GB_f! GB + 0.1 GB = ~%YELLOW%!ram_low_i!.!ram_low_f! GB%RESET%
-echo                 %CYAN%Best for:%RESET% Older PCs, low RAM systems
+set /a ram_ultra=!MODEL_SIZE_MB! + 3000
+set /a ram_ultra_i=!ram_ultra! / 1000
+set /a ram_ultra_f=(!ram_ultra! %% 1000) / 100
+
+echo %GREEN%[L] LOW%RESET%      - 1 CPU core, ~1500 words memory, Low priority
+echo                 Estimated RAM: ~!MODEL_SIZE_GB_i!.!MODEL_SIZE_GB_f! GB + 0.2 GB = ~%YELLOW%!ram_low_i!.!ram_low_f! GB%RESET%
+echo                 %CYAN%Best for:%RESET% Older PCs, low RAM systems, text only
 echo.
-echo %GREEN%[M] MEDIUM%RESET%   - 2 CPU cores, ~750 words memory, Normal priority
-echo                 Estimated RAM: ~!MODEL_SIZE_GB_i!.!MODEL_SIZE_GB_f! GB + 0.3 GB = ~%YELLOW%!ram_med_i!.!ram_med_f! GB%RESET%
-echo                 %CYAN%Best for:%RESET% Standard Q^&A, balanced performance
+echo %GREEN%[M] MEDIUM%RESET%   - 2 CPU cores, ~3000 words memory, Normal priority
+echo                 Estimated RAM: ~!MODEL_SIZE_GB_i!.!MODEL_SIZE_GB_f! GB + 0.4 GB = ~%YELLOW%!ram_med_i!.!ram_med_f! GB%RESET%
+echo                 %CYAN%Best for:%RESET% Standard Q^&A, balanced performance, mostly text
 echo.
-echo %GREEN%[H] HIGH%RESET%     - 4 CPU cores, ~1500 words memory, High priority
-echo                 Estimated RAM: ~!MODEL_SIZE_GB_i!.!MODEL_SIZE_GB_f! GB + 0.6 GB = ~%YELLOW%!ram_high_i!.!ram_high_f! GB%RESET%
-echo                 %CYAN%Best for:%RESET% Complex tasks, longer conversations
+echo %GREEN%[H] HIGH%RESET%     - 4 CPU cores, ~6000 words memory, High priority
+echo                 Estimated RAM: ~!MODEL_SIZE_GB_i!.!MODEL_SIZE_GB_f! GB + 0.8 GB = ~%YELLOW%!ram_high_i!.!ram_high_f! GB%RESET%
+echo                 %CYAN%Best for:%RESET% Complex tasks, file uploads, small vision
+echo.
+echo %RED%[U] ULTRA%RESET%    - 6 CPU cores, ~24000 words memory (32k), High priority
+echo                 Estimated RAM: ~!MODEL_SIZE_GB_i!.!MODEL_SIZE_GB_f! GB + 3.0 GB = ~%YELLOW%!ram_ultra_i!.!ram_ultra_f! GB%RESET%
+echo                 %CYAN%Best for:%RESET% Books, massive codebases, powerful PCs only!
 echo.
 echo %RED%Note:%RESET% Total RAM = Model Size + Context Memory
 echo.
 
-set /p pwr="Select working mode [L/M/H] (press Enter for Medium): "
+set /p pwr="Select working mode [L/M/H/U] (press Enter for Medium): "
 
 :: Default to Medium if empty
 if "!pwr!"=="" set "pwr=M"
 
 :: Set defaults (Medium)
 set final_threads=2
-set final_context=1024
+set final_context=4096
 set final_prio=1
 set mode=MEDIUM
 set mode_color=%GREEN%
+set "adv_params=--min-p 0.05"
 
 if /i "%pwr%"=="l" (
     set final_threads=1
-    set final_context=512
+    set final_context=2048
     set final_prio=-1
     set mode=LOW
     set mode_color=%YELLOW%
+    set "adv_params=--min-p 0.05"
 )
 if /i "%pwr%"=="m" (
     set final_threads=2
-    set final_context=1024
+    set final_context=4096
     set final_prio=1
     set mode=MEDIUM
     set mode_color=%GREEN%
+    set "adv_params=--min-p 0.05"
 )
 if /i "%pwr%"=="h" (
     set final_threads=4
-    set final_context=2048
+    set final_context=8192
     set final_prio=3
     set mode=HIGH
     set mode_color=%CYAN%
+    set "adv_params=--min-p 0.05 --cache-type-k q8_0 --cache-type-v q8_0"
+)
+if /i "%pwr%"=="u" (
+    set final_threads=6
+    set final_context=32768
+    set final_prio=3
+    set mode=ULTRA
+    set mode_color=%RED%
+    set "adv_params=--min-p 0.05 --cache-type-k q4_0 --cache-type-v q4_0"
 )
 
 :: Validate input
-if not "!mode!"=="LOW" if not "!mode!"=="MEDIUM" if not "!mode!"=="HIGH" (
+if not "!mode!"=="LOW" if not "!mode!"=="MEDIUM" if not "!mode!"=="HIGH" if not "!mode!"=="ULTRA" (
     echo %RED%Invalid performance mode. Using MEDIUM as default.%RESET%
     set final_threads=2
-    set final_context=1024
+    set final_context=4096
     set final_prio=1
     set mode=MEDIUM
+    set "adv_params=--min-p 0.05"
     timeout /t 2 >nul
 )
 
@@ -324,6 +365,8 @@ if "!prompt_choice!"=="4" (
     echo.
     set /p "SYSTEM_PROMPT=Enter your custom system prompt: "
 )
+
+goto skip_personality
 
 :webui_setup
 cls
@@ -434,9 +477,11 @@ if "!INTERFACE_MODE!"=="BROWSER" (
     "!ENGINE_EXE!" ^
       -m "models\!MODEL_NAME!" ^
       !ngl_param! ^
+      !flash_attn_param! ^
       -t !final_threads! ^
       -c !final_context! ^
       --prio !final_prio! ^
+      !adv_params! ^
       --host !host_param! ^
       --port 8080 ^
       !alias_param! ^
@@ -458,10 +503,12 @@ if not exist "!ENGINE_EXE!" (
 "!ENGINE_EXE!" ^
   -m "models\!MODEL_NAME!" ^
   !ngl_param! ^
+  !flash_attn_param! ^
   -cnv ^
   -t !final_threads! ^
   -c !final_context! ^
   --prio !final_prio! ^
+  !adv_params! ^
   -p "!SYSTEM_PROMPT!"
 
 :session_end
