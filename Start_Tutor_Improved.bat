@@ -30,6 +30,7 @@ echo.
 set "engine_found=0"
 for /d %%d in (engine-*) do (
     if exist "%%d\llama-cli.exe" set "engine_found=1"
+    if exist "%%d\llama-server.exe" set "engine_found=1"
 )
 
 if "!engine_found!"=="0" (
@@ -123,7 +124,10 @@ echo.
 set engine_count=0
 
 for /d %%d in (engine-*) do (
-    if exist "%%d\llama-cli.exe" (
+    set "has_engine=0"
+    if exist "%%d\llama-cli.exe" set "has_engine=1"
+    if exist "%%d\llama-server.exe" set "has_engine=1"
+    if "!has_engine!"=="1" (
         set /a engine_count+=1
         set "engine_dir!engine_count!=%%d"
         
@@ -152,20 +156,12 @@ if !valid! equ 0 (
 )
 
 set "selected_engine_dir=!engine_dir%engine_choice%!"
-set "ENGINE_EXE=!selected_engine_dir!\llama-cli.exe"
 set "engine_name=!selected_engine_dir:engine-=!"
 
 :: Enable GPU offloading for all except pure CPU
 set "ngl_param=-ngl 99"
 if /i "!engine_name!"=="cpu" (
     set "ngl_param="
-)
-
-if not exist "!ENGINE_EXE!" (
-    echo.
-    echo %RED%[WARNING] The executable !ENGINE_EXE! was not found.%RESET%
-    echo %YELLOW%Please check your installation. The launcher may crash if the file is missing.%RESET%
-    timeout /t 3 >nul
 )
 
 :: --- PERFORMANCE SELECTION ---
@@ -238,6 +234,28 @@ if not "!mode!"=="LOW" if not "!mode!"=="MEDIUM" if not "!mode!"=="HIGH" (
     timeout /t 2 >nul
 )
 
+:: --- INTERFACE SELECTION ---
+cls
+echo.
+echo %CYAN%========================================%RESET%
+echo %CYAN%        INTERFACE SELECTION%RESET%
+echo %CYAN%========================================%RESET%
+echo.
+echo %GREEN%[1] Terminal Mode%RESET% - Clean, text-based CLI chat
+echo %YELLOW%[2] Browser Mode%RESET%  - Premium Web UI with image support ^& features
+echo.
+set /p interface_choice="Select interface [1-2] (press Enter for Terminal): "
+
+if "!interface_choice!"=="" set "interface_choice=1"
+
+set "INTERFACE_MODE=TERMINAL"
+if "!interface_choice!"=="2" set "INTERFACE_MODE=BROWSER"
+
+if "!INTERFACE_MODE!"=="BROWSER" (
+    set "SYSTEM_PROMPT=Configured via Web UI"
+    goto skip_personality
+)
+
 :: --- SYSTEM PROMPT CUSTOMIZATION ---
 cls
 echo.
@@ -270,6 +288,8 @@ if "!prompt_choice!"=="4" (
     set /p "SYSTEM_PROMPT=Enter your custom system prompt: "
 )
 
+:skip_personality
+
 :: --- LAUNCH CONFIRMATION ---
 cls
 echo.
@@ -284,6 +304,7 @@ echo %YELLOW%Engine:%RESET%      !engine_name!
 echo %YELLOW%Context:%RESET%     !final_context! tokens (~!final_context! words)
 echo %YELLOW%Priority:%RESET%    !final_prio!
 echo %YELLOW%Prompt:%RESET%      !SYSTEM_PROMPT!
+echo %YELLOW%Interface:%RESET%   !INTERFACE_MODE!
 echo.
 echo %GREEN%Starting AI in 3 seconds...%RESET%
 echo %CYAN%(Press Ctrl+C to cancel)%RESET%
@@ -294,6 +315,40 @@ timeout /t 3 >nul
 echo %CYAN%Initializing AI model...%RESET%
 echo.
 
+if "!INTERFACE_MODE!"=="BROWSER" (
+    set "ENGINE_EXE=!selected_engine_dir!\llama-server.exe"
+    if not exist "!ENGINE_EXE!" (
+        echo %RED%[ERROR] llama-server.exe not found in !selected_engine_dir!%RESET%
+        echo Cannot start Web UI. Falling back to Terminal.
+        timeout /t 3 >nul
+        goto fallback_terminal
+    )
+    echo %YELLOW%Waiting for the server to start...%RESET%
+    echo %CYAN%Your browser will open automatically.%RESET%
+    
+    :: Use 'start /b' to run the async timer without a new window for the timeout
+    start /b "" cmd /c "timeout /t 2 >nul & start http://127.0.0.1:8080"
+    
+    "!ENGINE_EXE!" ^
+      -m "models\!MODEL_NAME!" ^
+      !ngl_param! ^
+      -t !final_threads! ^
+      -c !final_context! ^
+      --prio !final_prio! ^
+      --host 127.0.0.1 ^
+      --port 8080
+      
+    goto session_end
+)
+
+:fallback_terminal
+set "ENGINE_EXE=!selected_engine_dir!\llama-cli.exe"
+if not exist "!ENGINE_EXE!" (
+     echo %RED%[ERROR] llama-cli.exe not found in !selected_engine_dir!%RESET%
+     pause
+     goto menu
+)
+
 "!ENGINE_EXE!" ^
   -m "models\!MODEL_NAME!" ^
   !ngl_param! ^
@@ -302,6 +357,8 @@ echo.
   -c !final_context! ^
   --prio !final_prio! ^
   -p "!SYSTEM_PROMPT!"
+
+:session_end
 
 :: --- POST-EXECUTION ---
 echo.

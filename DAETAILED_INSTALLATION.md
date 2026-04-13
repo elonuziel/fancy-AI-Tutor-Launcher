@@ -31,7 +31,7 @@ The engine is what actually processes your questions. You can choose to download
    - For others, look for the suffix (e.g., `-vulkan`, `-cu1220`, `-hip`, `-sycl`).
 3. Create a new folder starting with `engine-` (for example: `engine-cpu` or `engine-hip`).
 4. Extract **all** files from your downloaded zip into that folder. 
-5. You should see `llama-cli.exe` and some `.dll` files inside the folder you just populated.
+5. You should see `llama-cli.exe`, `llama-server.exe`, and some `.dll` files inside the folder you just populated.
 
 ## 4. Getting the Models (The "Knowledge")
 Models are the AI's memory. They end in `.gguf`.
@@ -49,11 +49,13 @@ Models are the AI's memory. They end in `.gguf`.
    - **LOW:** Uses 1 core. Best if you have 4GB RAM.
    - **MEDIUM:** Uses 2 cores. Good for most tasks.
    - **HIGH:** Uses 4 cores. Fastest, but uses more RAM.
-5. Pick a personality (e.g., Python Tutor) and start chatting!
+5. Choose your Interface Mode:
+   - **Terminal Mode:** The classic, fast CLI interface. Pick your personality next, and start chatting.
+   - **Browser Mode (Web UI):** Opens a beautiful "ChatGPT-like" display in your web browser. You can configure personas and use vision models to upload images here!
 
 ---
 
 ## ❓ Troubleshooting
-- **Error: Could not find any engine files!:** You didn't put the files in a folder starting with `engine-` (like `engine-cpu/` or `engine-cuda/`) correctly, or you didn't extract `llama-cli.exe`.
+- **Error: Could not find any engine files!:** You didn't put the files in a folder starting with `engine-` (like `engine-cpu/` or `engine-cuda/`) correctly, or you didn't extract `llama-cli.exe` or `llama-server.exe`.
 - **Error: No .gguf files found:** You need to download a model and put it in the `models/` folder.
 - **AI is too slow:** Try a smaller model (under 3GB) or use "LOW" mode.
