@@ -74,7 +74,7 @@ for %%f in ("models\*.gguf") do (
     
     :: Calculate GB for display
     set /a sizeGB_i=!sizeMB! / 1000
-    set /a sizeGB_f=(!sizeMB! %% 1000) / 100
+    set /a sizeGB_f=!sizeMB! %% 1000 / 100
     
     echo %GREEN%[!count!]%RESET% %%~nxf %YELLOW%(~!sizeGB_i!.!sizeGB_f! GB)%RESET%
 )
@@ -290,7 +290,7 @@ if "!interface_choice!"=="2" set "INTERFACE_MODE=BROWSER"
 
 if "!INTERFACE_MODE!"=="BROWSER" (
     set "SYSTEM_PROMPT=Configured via Web UI"
-    goto skip_personality
+    goto webui_setup
 )
 
 :: --- SYSTEM PROMPT CUSTOMIZATION ---
@@ -323,6 +323,71 @@ if "!prompt_choice!"=="3" (
 if "!prompt_choice!"=="4" (
     echo.
     set /p "SYSTEM_PROMPT=Enter your custom system prompt: "
+)
+
+:webui_setup
+cls
+echo.
+echo %CYAN%========================================%RESET%
+echo %CYAN%        WEB UI CONFIGURATION%RESET%
+echo %CYAN%========================================%RESET%
+echo.
+
+:: 1. Alias
+set "webui_alias=AI Tutor"
+set /p webui_alias="Enter a name for your AI (Press Enter for 'AI Tutor'): "
+set "alias_param=--alias "!webui_alias!""
+
+:: 2. Vision Limit explanation & prompt
+echo.
+echo %CYAN%--- Vision Support (Image Uploads) ---%RESET%
+echo Vision allows the AI to "see" images you upload in the Web UI.
+echo %YELLOW%Limitations:%RESET% Vision requires a special 'mmproj' file that matches your model.
+echo %YELLOW%Speed:%RESET% Vision processing is very slow on older PCs and uses extra RAM.
+echo.
+set "use_vision=N"
+set /p use_vision="Do you want to enable Vision? [Y/N] (Press Enter for N): "
+set "mmproj_param="
+if /i "!use_vision!"=="y" (
+    set mm_count=0
+    for %%f in ("models\*mmproj*.gguf") do (
+        set /a mm_count+=1
+        set "mm_file!mm_count!=%%~nxf"
+        echo %GREEN%[!mm_count!]%RESET% %%~nxf
+    )
+    if !mm_count! equ 0 (
+        echo %RED%No files with 'mmproj' found in models folder. Vision disabled.%RESET%
+        timeout /t 3 >nul
+    ) else (
+        set "mm_choice=1"
+        set /p mm_choice="Select mmproj file [1-!mm_count!] (Press Enter for 1): "
+        set "selected_mm="
+        for /l %%i in (1,1,!mm_count!) do (
+            if "!mm_choice!"=="%%i" set "selected_mm=!mm_file%%i!"
+        )
+        if "!selected_mm!"=="" set "selected_mm=!mm_file1!"
+        set "mmproj_param=--mmproj "models\!selected_mm!""
+        echo Selected: !selected_mm!
+    )
+)
+
+:: 3. Network Sharing
+echo.
+echo %CYAN%--- Network Sharing ---%RESET%
+echo This allows other devices on your Wi-Fi (like your phone) to connect to the Tutor.
+set "share_net=N"
+set /p share_net="Enable Network Sharing? [Y/N] (Press Enter for N): "
+set "host_param=127.0.0.1"
+set "api_key_param="
+
+if /i "!share_net!"=="y" (
+    set "host_param=0.0.0.0"
+    echo.
+    echo %YELLOW%Security Warning:%RESET% Anyone on your network can access the AI.
+    set /p api_key="Set an optional API Key for security (Press Enter for none): "
+    if not "!api_key!"=="" (
+        set "api_key_param=--api-key "!api_key!""
+    )
 )
 
 :skip_personality
@@ -372,8 +437,12 @@ if "!INTERFACE_MODE!"=="BROWSER" (
       -t !final_threads! ^
       -c !final_context! ^
       --prio !final_prio! ^
-      --host 127.0.0.1 ^
-      --port 8080
+      --host !host_param! ^
+      --port 8080 ^
+      !alias_param! ^
+      !mmproj_param! ^
+      !api_key_param! ^
+      --jinja
       
     goto session_end
 )

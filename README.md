@@ -44,7 +44,8 @@ Models define the AI's memory and intelligence. They end in `.gguf`.
 Since new AI models are released constantly, focus on these metrics rather than specific names when searching HuggingFace for `.gguf` files:
 - **Parameter Count (Size):** For standard or older PCs, stick to the **1B to 4B** range (e.g., 1.5B, 3B). They consume minimal RAM and process words much faster on older CPUs. 
 - **Quantization (Level):** Look for files ending in **`Q4_K_M`** or **`Q5_K_M`**. These formats provide the ideal balance between low hardware requirements and retaining the AI's intelligence.
-- **Type:** Always choose the **"Instruct"** or **"Chat"** version of a model so it knows how to answer questions properly. 
+- **Type:** Always choose the **"Instruct"** or **"Chat"** version of a model so it knows how to answer questions properly.
+- **Vision (Image) Support:** If you want to upload images in the Web UI, you must download a multimodal projector file (ends in `mmproj...gguf`) that matches your main model. Place it in the `models/` folder. Note that Vision uses significant extra RAM and is slow on older hardware.
 - **Discovery:** Browse `r/LocalLLaMA` on Reddit or HuggingFace's "Trending" section for the newest breakthroughs. *(For context, historical examples of great lightweight models included Qwen 2.5 1.5B, Llama 3.2 3B, and Phi-3).*
 
 ### 3. Launching your AI
@@ -56,7 +57,10 @@ Since new AI models are released constantly, focus on these metrics rather than 
    - **HIGH** (4 Cores / 2048 tokens): Fastest processing for complex tasks, uses more RAM.
 4. Choose your Interface Mode:
    - **Terminal Mode:** Fast CLI interface. Pick your personality next, and start chatting.
-   - **Browser Mode (Web UI):** Opens a complete "ChatGPT-like" display in your web browser. Features include persona config and vision models.
+   - **Browser Mode (Web UI):** Opens a complete "ChatGPT-like" display in your web browser. This mode also provides:
+     - **Custom Aliases:** Name your AI Tutor directly in the start-up script.
+     - **Vision Support:** If you downloaded an `mmproj` file, the script asks to enable it, letting you drag-and-drop images into the chat!
+     - **Network Sharing:** Optionally expose the Web UI to your local Wi-Fi, protected by an API Key, so you can chat from your phone.
 
 ## ❓ Troubleshooting
 - **Error: Could not find any engine files!:** You didn't put the files in a folder starting with `engine-` properly, or didn't extract `llama-cli.exe` / `llama-server.exe`.
