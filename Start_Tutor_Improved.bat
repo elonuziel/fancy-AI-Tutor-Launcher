@@ -67,8 +67,10 @@ for %%f in ("models\*.gguf") do (
     set "model!count!=%%~nxf"
     set "modelsize!count!=%%~zf"
     
-    :: Calculate size in MB
-    set /a sizeMB=%%~zf/1048576
+    :: Calculate size in MB (approximate using string length to avoid 32-bit limit)
+    set "bytes=%%~zf"
+    set "sizeMB=!bytes:~0,-6!"
+    if "!sizeMB!"=="" set "sizeMB=0"
     
     echo %GREEN%[!count!]%RESET% %%~nxf %YELLOW%(~!sizeMB! MB)%RESET%
 )
@@ -109,7 +111,8 @@ if !valid! equ 0 (
 
 set "MODEL_NAME=!model%choice%!"
 set "MODEL_SIZE_BYTES=!modelsize%choice%!"
-set /a MODEL_SIZE_MB=!MODEL_SIZE_BYTES!/1048576
+set "MODEL_SIZE_MB=!MODEL_SIZE_BYTES:~0,-6!"
+if "!MODEL_SIZE_MB!"=="" set "MODEL_SIZE_MB=0"
 
 :: --- COMPUTE ENGINE SELECTION ---
 cls
@@ -191,16 +194,20 @@ echo %YELLOW%Selected Model:%RESET% !MODEL_NAME! (~!MODEL_SIZE_MB! MB)
 echo.
 echo %CYAN%Performance Modes:%RESET%
 echo.
+set /a ram_low=!MODEL_SIZE_MB! + 100
+set /a ram_med=!MODEL_SIZE_MB! + 250
+set /a ram_high=!MODEL_SIZE_MB! + 600
+
 echo %GREEN%[L] LOW%RESET%      - 1 CPU core, ~350 words memory, Low priority
-echo                 Estimated RAM: ~!MODEL_SIZE_MB! MB + 100 MB = ~%YELLOW%!MODEL_SIZE_MB!00 MB%RESET%
+echo                 Estimated RAM: ~!MODEL_SIZE_MB! MB + 100 MB = ~%YELLOW%!ram_low! MB%RESET%
 echo                 %CYAN%Best for:%RESET% Older PCs, 4GB RAM systems
 echo.
 echo %GREEN%[M] MEDIUM%RESET%   - 2 CPU cores, ~750 words memory, Normal priority
-echo                 Estimated RAM: ~!MODEL_SIZE_MB! MB + 250 MB = ~%YELLOW%!MODEL_SIZE_MB!50 MB%RESET%
+echo                 Estimated RAM: ~!MODEL_SIZE_MB! MB + 250 MB = ~%YELLOW%!ram_med! MB%RESET%
 echo                 %CYAN%Best for:%RESET% Standard Q^&A, balanced performance
 echo.
 echo %GREEN%[H] HIGH%RESET%     - 4 CPU cores, ~1500 words memory, High priority
-echo                 Estimated RAM: ~!MODEL_SIZE_MB! MB + 600 MB = ~%YELLOW%!MODEL_SIZE_MB!00 MB%RESET%
+echo                 Estimated RAM: ~!MODEL_SIZE_MB! MB + 600 MB = ~%YELLOW%!ram_high! MB%RESET%
 echo                 %CYAN%Best for:%RESET% Complex tasks, longer conversations
 echo.
 echo %RED%Note:%RESET% Total RAM = Model Size + Context Memory
