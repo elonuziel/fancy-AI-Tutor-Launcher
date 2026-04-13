@@ -72,7 +72,11 @@ for %%f in ("models\*.gguf") do (
     set "sizeMB=!bytes:~0,-6!"
     if "!sizeMB!"=="" set "sizeMB=0"
     
-    echo %GREEN%[!count!]%RESET% %%~nxf %YELLOW%(~!sizeMB! MB)%RESET%
+    :: Calculate GB for display
+    set /a sizeGB_i=!sizeMB! / 1000
+    set /a sizeGB_f=(!sizeMB! %% 1000) / 100
+    
+    echo %GREEN%[!count!]%RESET% %%~nxf %YELLOW%(~!sizeGB_i!.!sizeGB_f! GB)%RESET%
 )
 
 if !models_found! equ 0 (
@@ -113,6 +117,8 @@ set "MODEL_NAME=!model%choice%!"
 set "MODEL_SIZE_BYTES=!modelsize%choice%!"
 set "MODEL_SIZE_MB=!MODEL_SIZE_BYTES:~0,-6!"
 if "!MODEL_SIZE_MB!"=="" set "MODEL_SIZE_MB=0"
+set /a MODEL_SIZE_GB_i=!MODEL_SIZE_MB! / 1000
+set /a MODEL_SIZE_GB_f=(!MODEL_SIZE_MB! %% 1000) / 100
 
 :: --- COMPUTE ENGINE SELECTION ---
 cls
@@ -190,24 +196,32 @@ echo %CYAN%========================================%RESET%
 echo %CYAN%        PERFORMANCE LEVEL%RESET%
 echo %CYAN%========================================%RESET%
 echo.
-echo %YELLOW%Selected Model:%RESET% !MODEL_NAME! (~!MODEL_SIZE_MB! MB)
+echo %YELLOW%Selected Model:%RESET% !MODEL_NAME! (~!MODEL_SIZE_GB_i!.!MODEL_SIZE_GB_f! GB)
 echo.
 echo %CYAN%Performance Modes:%RESET%
 echo.
 set /a ram_low=!MODEL_SIZE_MB! + 100
+set /a ram_low_i=!ram_low! / 1000
+set /a ram_low_f=(!ram_low! %% 1000) / 100
+
 set /a ram_med=!MODEL_SIZE_MB! + 250
+set /a ram_med_i=!ram_med! / 1000
+set /a ram_med_f=(!ram_med! %% 1000) / 100
+
 set /a ram_high=!MODEL_SIZE_MB! + 600
+set /a ram_high_i=!ram_high! / 1000
+set /a ram_high_f=(!ram_high! %% 1000) / 100
 
 echo %GREEN%[L] LOW%RESET%      - 1 CPU core, ~350 words memory, Low priority
-echo                 Estimated RAM: ~!MODEL_SIZE_MB! MB + 100 MB = ~%YELLOW%!ram_low! MB%RESET%
-echo                 %CYAN%Best for:%RESET% Older PCs, 4GB RAM systems
+echo                 Estimated RAM: ~!MODEL_SIZE_GB_i!.!MODEL_SIZE_GB_f! GB + 0.1 GB = ~%YELLOW%!ram_low_i!.!ram_low_f! GB%RESET%
+echo                 %CYAN%Best for:%RESET% Older PCs, low RAM systems
 echo.
 echo %GREEN%[M] MEDIUM%RESET%   - 2 CPU cores, ~750 words memory, Normal priority
-echo                 Estimated RAM: ~!MODEL_SIZE_MB! MB + 250 MB = ~%YELLOW%!ram_med! MB%RESET%
+echo                 Estimated RAM: ~!MODEL_SIZE_GB_i!.!MODEL_SIZE_GB_f! GB + 0.3 GB = ~%YELLOW%!ram_med_i!.!ram_med_f! GB%RESET%
 echo                 %CYAN%Best for:%RESET% Standard Q^&A, balanced performance
 echo.
 echo %GREEN%[H] HIGH%RESET%     - 4 CPU cores, ~1500 words memory, High priority
-echo                 Estimated RAM: ~!MODEL_SIZE_MB! MB + 600 MB = ~%YELLOW%!ram_high! MB%RESET%
+echo                 Estimated RAM: ~!MODEL_SIZE_GB_i!.!MODEL_SIZE_GB_f! GB + 0.6 GB = ~%YELLOW%!ram_high_i!.!ram_high_f! GB%RESET%
 echo                 %CYAN%Best for:%RESET% Complex tasks, longer conversations
 echo.
 echo %RED%Note:%RESET% Total RAM = Model Size + Context Memory
